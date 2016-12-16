@@ -1,0 +1,5 @@
+Added progress bar support
+Added Dialog windows
+Added new menu bar feature
+Minor bug fixes
+First release!
