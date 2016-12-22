@@ -2,9 +2,9 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-def AutomateEmail(ra,n,bn,dr,exception,msl,mel):
+def AutoEmail(ra,n,bn,dr,exception,msl,mel):
 	fromaddr = 'joe.master.embot@gmail.com'
-	toaddr = str(ra)
+	toaddr = ra
 	msg = MIMEMultipart()
 	msg['From'] = fromaddr
 	msg['To'] = toaddr
@@ -13,7 +13,7 @@ def AutomateEmail(ra,n,bn,dr,exception,msl,mel):
 	body = """Hi %s,
 
 	Build %s has been completed and the images have been processed.
-	The images and timelapses can be found at: %s.
+	The images and timelapses can be found at %s.
 
 	"""%(n,bn,dr)
 	if exception:
@@ -21,9 +21,10 @@ def AutomateEmail(ra,n,bn,dr,exception,msl,mel):
 		Layers missing are pictures: %s through %s. Sorry for any trouble this may cause.
 
 		"""%(msl,mel)
-	body += """From Joseph Scull
+	body += """
+	From Joseph Scull
 
-	(This was sent via script (Do not reply). If there are any issues with this please speak to me or drop me an email on joescull@hieta.biz)"""
+	This was sent via script. If there are any issues with this please speak to me or drop me an email on joescull@hieta.biz"""
 	
 	msg.attach(MIMEText(body,'plain'))
 

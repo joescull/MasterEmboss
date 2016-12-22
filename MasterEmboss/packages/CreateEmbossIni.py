@@ -7,7 +7,8 @@ import os
 import shutil
 
 def EmbossInit():
-    IniPath = "C:\\Users\\jscull\\AppData\\Roaming\\IrfanView\\"
+    #IniPath = "C:\\Users\\jscull\\AppData\\Roaming\\IrfanView\\"
+    IniPath = "C:\\Users\\Administrator\\AppData\\Roaming\\IrfanView\\"
     OrigIniPath = IniPath + "i_view64.ini"
     NewIniPath = IniPath + "i_view64New.ini"
     BackupIniPath = IniPath + "i_view64_bk.ini"

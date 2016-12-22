@@ -28,11 +28,11 @@ class bossinit(tk.Tk):
 
 	def activate(self):
 		self.frames = {}
-		for F in (IntroPage,RenamePage,ProcessPage):
-			if(F == ProcessPage):
-				frame = F(self.container,self)
-			else:
-				frame = F(self.container,self)
+		for F in (IntroPage,RenamePage,ProcessPage,EndPage,EmailPage):
+			#if(F == ProcessPage):
+				#frame = F(self.container,self)
+			#else:
+			frame = F(self.container,self)
 			self.frames[F] = frame
 			frame.grid(row=0,column=0,sticky="nsew")
 
@@ -42,7 +42,10 @@ class bossinit(tk.Tk):
 			app.geometry(size)				
 		elif cont == ProcessPage:
 			app.geometry("615x395")
-			
+		elif cont == EndPage:
+			app.geometry("600x155")
+		elif cont == EmailPage:
+			app.geometry("200x165")
 		frame = self.frames[cont]
 		frame.tkraise()
 
@@ -124,7 +127,7 @@ class IntroPage(ttk.Frame):
 
 		exit = ttk.Button(self,text="Exit")
 		exit.grid(row=self.exitRow,column=0,columnspan=2,padx=5,pady=20)
-		go = ttk.Button(self,text="Go",command=self.validate)
+		go = ttk.Button(self,text="Go",command=self.medium)
 		go.grid(row=self.goRow,column=3,columnspan=2,padx=5,pady=20)
 
 	def expandFrame(self):
@@ -141,23 +144,36 @@ class IntroPage(ttk.Frame):
 			self.l.grid_forget()
 			self.dirNum.grid_forget()
 
-	def validate(self):
-		self.controller.activate()
+	def medium(self):
 		if(self.v.get() == True):
-			pattern = re.compile("[0-9]+")
-			try:
-				if(pattern.match(self.dirNum.get())):	
-					global globalNum	
-					rename = self.controller.get_page(RenamePage)
-					rename.add_widgets(int(self.dirNum.get()))
-					globalNum = int(self.dirNum.get())
-					self.controller.show_frame(RenamePage)
-				else:
-					print("Please Fill the Box")
-			except ValueError:
-				print("You have caused a ValueError")
+			val = self.validate()
+			if val:
+				self.controller.activate()
+				self.iniPage(self.dirNum.get())
+				self.controller.show_frame(RenamePage)
+			else:
+				tk.messagebox.showinfo("Validation Error","Please enter a valid number into the entry.")
 		elif(self.v.get() == False):
+			self.controller.activate()
+			self.iniPage(1)
 			self.controller.show_frame(RenamePage)
+
+	def validate(self):
+		pattern = re.compile("[0-9]+")
+		try:
+			if(pattern.match(self.dirNum.get())):
+				return True
+			else:
+				return False
+		except ValueError:
+			print("You have caused a ValueError")
+			return False
+
+	def iniPage(self,n):
+		global globalNum
+		globalNum = int(n)
+		rename = self.controller.get_page(RenamePage)
+		rename.add_widgets(globalNum)
 
 class RenamePage(tk.Frame):
 	def __init__(self, parent, controller):
@@ -224,12 +240,14 @@ class RenamePage(tk.Frame):
 	def findWdDirectory(self,num):
 		directory = tk.filedialog.askdirectory()
 		self.wdDirEnt[num - 1].config(state='normal')
+		self.wdDirEnt[num - 1].delete(0,"end")
 		self.wdDirEnt[num - 1].insert("end",directory)
 		self.wdDirEnt[num - 1].config(state='readonly')
 
 	def findOutDirectory(self):
 		directory = tk.filedialog.askdirectory()
 		self.outDir.config(state='normal')
+		self.outDir.delete(0,"end")
 		self.outDir.insert("end",directory)
 		self.outDir.config(state='readonly')
 
@@ -269,11 +287,11 @@ class RenamePage(tk.Frame):
 				eNum = int(self.eNumE[i].get())
 				print("end Numer: %s"%eNum)
 				if i == 0:
-					wNum = int(self.writeNumEnt.get())
-					print("write number: %s"%wNum)
+					self.wNum = int(self.writeNumEnt.get())
+					print("write number: %s"%self.wNum)
 				elif i > 0:
-					wNum += carry
-					print("write number: %s"%wNum)
+					self.wNum = carry #was +=
+					print("write number: %s"%self.wNum)
 				preffix = self.preffix.get()
 				suffix = "."+self.suffix.get()
 				wd = self.wdDirEnt[i].get() + "/"#working directory, picture store path
@@ -297,9 +315,9 @@ class RenamePage(tk.Frame):
 				for i in range(StartPhotoNo, EndPhotoNo+1, 1):
 					iPhoto = NamePreffix + '%04d' %i + NameSuffix
 					print("Photo: %s"%iPhoto)
-					NewiPhoto = NamePreffix + '%05d' %(wNum) + NameSuffix
+					NewiPhoto = NamePreffix + '%05d' %(self.wNum) + NameSuffix
 					print("NewiPhoto: %s"%NewiPhoto)
-					wNum+=1
+					self.wNum+=1
 					print("Copy: %s to new Dir: %s"%(os.path.expanduser(wd+iPhoto),os.path.expanduser(nd+NewiPhoto)))
 					shutil.copy2(os.path.expanduser(wd+iPhoto), os.path.expanduser(nd+NewiPhoto))
 					k +=1
@@ -311,8 +329,8 @@ class RenamePage(tk.Frame):
 					if k == progress_track:
 						#print ("Processing photo %d of %d..." % (m, Photo_count))
 						k=0
-				carry = wNum
-				print("Carry: %s"%wNum)
+				carry = self.wNum
+				print("Carry: %s"%self.wNum)
 				
 				self.controller.show_frame(ProcessPage)
 		else:
@@ -376,6 +394,8 @@ class ProcessPage(tk.Frame):
 		self.feolV = tk.IntVar()
 		self.oddV = tk.IntVar()
 
+		self.wd = ""
+
 		title = ttk.Label(self,text="Processing Parameters:")
 		title.grid(row=0,column=0,padx=0,pady=10)
 		l = tk.Label(self,text="Build Number:")
@@ -395,21 +415,6 @@ class ProcessPage(tk.Frame):
 		self.ivBut.grid(row=2,column=3,padx=0,pady=5)
 		breaker3 = tk.Label(self,text="- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -")
 		breaker3.grid(row=3,column=0,columnspan=4)
-
-		#label = tk.Label(self,text="StartNum:") #Remove all of these values and grab them
-		#label.grid(row=4,column=0,padx=0,pady=5) #From the second window. saves input and time
-		#self.snEnt = ttk.Entry(self,width=5)
-		#self.snEnt.grid(row=4,column=1,padx=0,pady=5)
-		#label = tk.Label(self,text="EndNum:")
-		#label.grid(row=4,column=2,padx=0,pady=5)
-		#self.enEnt = ttk.Entry(self,width=5)
-		#self.enEnt.grid(row=4,column=3,padx=0,pady=5)
-		#label = tk.Label(self,text="Start Layer:")
-		#label.grid(row=5,column=0,padx=0,pady=5)
-		#self.slEnt = ttk.Entry(self,width=5)
-		#self.slEnt.grid(row=5,column=1,padx=0,pady=5)
-		#breaker2 = tk.Label(self,text="- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -")
-		#breaker2.grid(row=6,column=0,columnspan=4)
 
 		l = tk.Label(self,text="Crop X:")
 		l.grid(row=4,column=0,padx=0,pady=5)
@@ -454,7 +459,9 @@ class ProcessPage(tk.Frame):
 	def change(self):
 		directory = tk.filedialog.askdirectory()
 		self.ivEnt.config(state='normal')
-		self.ivEnt.config(text=directory)
+		self.ivEnt.delete(0,"end")
+		self.ivEnt.insert("end",directory)
+		#self.ivEnt['text'] = directory
 		self.ivEnt.config(state='readonly')
 
 	def run(self):
@@ -462,13 +469,13 @@ class ProcessPage(tk.Frame):
 		self.pb = tk.IntVar()
 		self.pb = 0
 
-		wd = page1.outDir.get()
-		print(wd)
+		self.wd = page1.outDir.get()
+		print(self.wd)
 
 		IrfanView = "C:\\Program Files\\IrfanView\\i_view64.exe"
 
 		NamePreffix = page1.preffix.get()
-		NameSuffix = page1.suffix.get()
+		NameSuffix = "."+page1.suffix.get()
 
 		namepage = self.controller.get_page(RenamePage)
 				
@@ -479,10 +486,13 @@ class ProcessPage(tk.Frame):
 			if (testString == ""):
 				endVal = i - 1
 				break
-		print(namepage.sNumE[0].get())
-		StartPhotoNo = int(namepage.sNumE[0].get())
-		EndPhotoNo = int(namepage.eNumE[endVal].get())
+		#print(namepage.sNumE[0].get())
+		#StartPhotoNo = int(namepage.sNumE[0].get())
+		StartPhotoNo = int(namepage.writeNumEnt.get())
+		#EndPhotoNo = int(namepage.eNumE[endVal].get())
+		EndPhotoNo = int(namepage.wNum)
 		StartLayer = int(namepage.writeNumEnt.get())
+		#print("Start")
 		#StartPhotoNo = int(self.snEnt.get())
 		#EndPhotoNo = int(self.enEnt.get())
 		#StartLayer = int(self.slEnt.get())
@@ -501,10 +511,10 @@ class ProcessPage(tk.Frame):
 		CropW = int(self.wEnt.get())  #Resulting image width
 		CropH = int(self.hEnt.get())  #Resulting image height
 
-		wd = wd.replace("/","\\")
+		self.wd = self.wd.replace("/","\\")
 
-		self.EOLDir = wd + "\\EOL"
-		self.PRCDir = wd + "\\PRC"
+		self.EOLDir = self.wd + "\\EOL"
+		self.PRCDir = self.wd + "\\PRC"
 
 		if os.path.exists(self.EOLDir)==0:
 			os.mkdir(self.EOLDir)
@@ -524,11 +534,15 @@ class ProcessPage(tk.Frame):
 
 		ProgressTrack = 10  #The interval at which progress is printed to screen
 
+		CropX = self.standard_width(CropX)
+
 		if (self.cropV.get()):
 			print("Cropping photos...")
 			for PhotoNo in range(StartPhotoNo, EndPhotoNo):
 				PhotoName = NamePreffix + '%05d' %PhotoNo + NameSuffix
-				PhotoPath = wd + '\\' + PhotoName
+				PhotoPath = self.wd + '\\' + PhotoName
+				print("PhotoName: %s"%PhotoName)
+				print("PhotoPath: %s"%PhotoPath)
 				if j ==0:  #EOL photo        
 					OutputPhotoName = self.Build_No + '_EOL_' + '%05d' %i + '.JPG'
 					subprocess.call(IrfanView+' '+PhotoPath+' /crop=(' +str(CropX)+ ',' +str(CropY)+ ',' +str(CropW)+ ',' +str(CropH)+ ',0) /convert='+self.EOLDir+'\\'+OutputPhotoName)
@@ -564,7 +578,8 @@ class ProcessPage(tk.Frame):
 		if os.path.exists(self.PRCEmbossDir) ==0:
 			os.mkdir(self.PRCEmbossDir)
 
-		EmbossIniPath = 'C:\\Users\\jscull\\AppData\\Roaming\\Irfanview\\Emboss.ini'
+		#EmbossIniPath = 'C:\\Users\\jscull\\AppData\\Roaming\\Irfanview\\Emboss.ini'
+		EmbossIniPath = 'C:\\Users\\Administrator\\AppData\\Roaming\\IrfanView\\i_view64.ini' #for when @ QA
 
 		print('Preparing for photo embossing')
 		EmbossInit()
@@ -575,6 +590,8 @@ class ProcessPage(tk.Frame):
 			for PhotoNo in range(StartLayer,LastLayerNo):
 				PhotoName = self.Build_No + '_EOL_'+'%05d' %PhotoNo+'.JPG'
 				PhotoPath = self.EOLDir +'\\'+ PhotoName
+				print("PhotoName: %s"%PhotoName)
+				print("PhotoPath: %s"%PhotoPath)
 				EmbossedPhotoDir = self.EOLEmbossDir + '\\' + PhotoName  #Outputfile directory
 				SubProcessCommand = IrfanView+ ' ' + PhotoPath + ' /advancedbatch /convert='+EmbossedPhotoDir
 				subprocess.call(SubProcessCommand)
@@ -605,7 +622,7 @@ class ProcessPage(tk.Frame):
 				self.progress["value"] = self.pb
 				self.progress.update()
 				
-		self.ffmpegDir = "C:\FFMPEG\\bin\\ffmpeg.exe "
+		self.ffmpegDir = "C:\\Program Files\\FFMPEG\\bin\\ffmpeg.exe "
 		self.frameRate = "-framerate 60 "
 		self.startnumber = "-start_number 1 "
 		self.format = "-c:v libx264 "
@@ -616,15 +633,23 @@ class ProcessPage(tk.Frame):
 		self.createPRCTL()
 
 		#add an ending protocol, open directory of output ask user if they want to be redirected into it or if they want to quit
-		self.end_protocol()		
+		self.end_protocol()
+
+	def standard_width(self,w):
+		if w % 2 == 0:
+			return w
+		else:		
+			w += 1
+			self.standard_width(w)
 
 	def createEOLTL(self):
 		print("Creating EOL TL")
 		path = self.EOLEmbossDir
 		path.replace("\\","/")
+		print("path: %s"%path)
 		os.chdir( path )
 		command = self.ffmpegDir+self.frameRate+self.startnumber+" -i "+self.Build_No+"_EOL_%05d.JPG "+self.format+self.output+"_EOL.mp4"	
-		print("Command must match this format: C:\FFMPEG\bin\ffmpeg.exe -framerate 60 -start_number 1 -i B00000_PRC_%05d.JPG -c:v libx264 -r 30 B00000_PRC.mp4")
+		print("Command must match this format: C:/FFMPEG/bin/ffmpeg.exe -framerate 60 -start_number 1 -i B00000_PRC_%05d.JPG -c:v libx264 -r 30 B00000_PRC.mp4")
 		print(command)
 		try:
 			subprocess.call(command)
@@ -649,32 +674,162 @@ class ProcessPage(tk.Frame):
 			print("Error calling command")
 
 	def end_protocol(self):
+		end = self.controller.get_page(EndPage)
+		end.od = self.wd
+		end.l2.config(text="Output Directory: %s"%end.od)
 		self.controller.show_frame(EndPage)
 
 class EndPage(ttk.Frame):
 	def __init__(self,parent,controller):
 		ttk.Frame.__init__(self,parent)
 		self.controller = controller
+		data = self.controller.get_page(RenamePage)
+		self.od = ""
 
 		l = ttk.Label(self,text="MasterEmboss is complete!")
-		l.pack()
-		l = ttk.Label(self,text="Output Directory: %s"%od)
-		l.pack()
-		b = ttk.Button(self,text="Open Dir & Quit",command=self.open_dir)
-		b.pack()
-		b = ttk.Button(self,text="Send Automated Email",command=AutomateEmail)
+		l.grid(row=0,column=2,columnspan=2,pady=10)
+		self.l2 = ttk.Label(self,text="Output Directory: %s"%self.od)
+		self.l2.grid(row=1,column=2,columnspan=2,pady=5)
+		b = ttk.Button(self,text="Open Directory",command=lambda x=1: self.open_dir(x))
+		b.grid(row=3,column=0,columnspan=2,padx=10,pady=10)
+		b = ttk.Button(self,text="Open Dir & Quit",command=lambda x=2: self.open_dir(x))
+		b.grid(row=3,column=2,columnspan=2,padx=10,pady=10)
 		b = ttk.Button(self,text="Just Quit",command=self.quit)
-		b.pack()
+		b.grid(row=3,column=4,columnspan=2,padx=10,pady=10)
+
+		self.b = ttk.Button(self,text="Send Automated Email",command=lambda p=EmailPage: self.controller.show_frame(p)) #Replace Open Directory button when ready
+		self.b.grid(row=2,column=2,columnspan=2,pady=10)
+
+	def bot_email(self):		
+		#try:
+			#AutomateEmail()
+		self.b['state'] = 'disabled'
+		self.b['text'] = 'Email Sent.'
+		#except:
+			#print("Error Sending Email")	
 
 	def quit(self):
 		app.destroy()
 
-	def open_dir(self):
+	def open_dir(self,x):
 		data = self.controller.get_page(RenamePage)
-		explorer = 'start %windir%\explorer.exe '
-		path = data.outDir.get()
+		#explorer = 'start %windir%\explorer.exe '
+		explorer = 'C:\\Windows\\explorer.exe '
+		path = self.od
+		print(path)
+		subprocess.call(explorer + path)
 
-		app.destroy()
+		if x == 2:
+			self.quit()
+
+class EmailPage(ttk.Frame):
+	def __init__(self,parent,controller):
+		ttk.Frame.__init__(self,parent)
+		self.controller = controller
+
+		self.recievers = ['Select reciepent',
+		'joescull1@gmail.com',
+		'aelson389@gmail.com',
+		'Option 3']
+		self.names = ['null','Joe','Adrian','Mr Bean']
+		
+		self.reciever = tk.StringVar()
+		self.exception = tk.BooleanVar()
+		self.exception.set(False)
+		self.recipient = ""
+		self.expanded = False
+
+		l = ttk.Label(self,text="To: ",justify='left')
+		l.grid(row=0,column=0,padx=5,pady=10)
+		self.om = ttk.OptionMenu(self,self.reciever,*self.recievers,command=self.get_persons)
+		self.om.grid(row=0,column=1,columnspan=2,padx=5,pady=10)
+		l = ttk.Label(self,text="Dir: ",justify='left')
+		l.grid(row=1,column=0,padx=5,pady=10)
+		self.e = ttk.Entry(self,width=20)
+		self.e.grid(row=1,column=1,columnspan=2,padx=5,pady=10)
+		self.c = ttk.Checkbutton(self,text="Exception? ",variable=self.exception,command=self.expand_win)
+		self.c.grid(row=2,column=0,columnspan=2,padx=5,pady=10)
+		b = ttk.Button(self,text="Send email",command=self.validate)
+		b.grid(row=5,column=0,columnspan=2,padx=10,pady=10)
+		b = ttk.Button(self,text="Back",command=self.go_back)
+		b.grid(row=5,column=2,columnspan=2,padx=10,pady=10)
+
+		self.l1 = ttk.Label(self,text="MSL: ")
+		self.l2 = ttk.Label(self,text="MEL: ")
+		self.e1 = ttk.Entry(self,width=10)
+		self.e2 = ttk.Entry(self,width=10)
+
+	def validate(self):
+		if (self.expanded)&(self.e.get().strip(" ") != ""):
+			pattern = "[0-9]+"
+
+			string1 = self.e1.get()
+			string2 = self.e2.get()
+
+			if regex(string1,pattern):
+				if regex(string2,pattern):
+					self.send_email()
+				else:
+					ttk.messagebox("Validation Error","Please enter a valid layer number and resubmit")
+			else:
+				ttk.messagebox("Validation Error","Please enter a valid layer number and resubmit")
+		elif (self.expanded == False)&(self.e.get().strip(" ") != ""):
+			self.send_email()
+		elif self.e.get().strip(" ") == "":
+			ttk.messagebox("Validation Error","Please enter a directory and resubmit")
+
+	def get_persons(self,val):
+		self.recipient = val 
+		print(val)
+
+	def send_email(self):
+		name = self.get_name(self.recipient)
+
+		process = self.controller.get_page(ProcessPage)
+
+		if self.expanded:
+			msl = self.e1.get()
+			mel = self.e2.get()
+		else:
+			msl = None
+			mel = None
+		print("""Params: 
+			Reciver: %s
+			Name: %s
+			Build: %s
+			Dir: %s
+			Exception: %s
+			MSL: %s
+			MEL: %s
+			"""%(str(self.recipient),name,process.Build_No,self.e.get(),self.exception,msl,mel))
+		AutomateEmail(str(self.recipient),name,process.Build_No,self.e.get(),self.expanded,msl,mel)
+
+	def get_name(self,email):
+		c = 0
+		for e in self.recievers:
+			if e == email:
+				return self.names[c]
+			c += 1
+		return 'null'
+
+	def go_back(self):
+		self.controller.show_frame(EndPage)
+
+	def expand_win(self):
+		if self.expanded ==  False:
+			self.expanded = True
+			app.geometry("200x250")
+			self.l1.grid(row=3,column=1,padx=5,pady=10)
+			self.l2.grid(row=4,column=1,padx=5,pady=10)
+			self.e1.grid(row=3,column=2,padx=5,pady=10)
+			self.e2.grid(row=4,column=2,padx=5,pady=10)
+		elif self.expanded:			
+			self.expanded = False
+			app.geometry("200x165")
+			self.l1.grid_forget()
+			self.l2.grid_forget()
+			self.e1.grid_forget()
+			self.e2.grid_forget()
 			
 class VersionDialog:
 	def __init__(self,parent):

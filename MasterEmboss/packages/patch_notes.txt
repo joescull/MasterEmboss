@@ -1,3 +1,7 @@
+Modified Email script & bug fixes + validation
+Added email script and window
+Validation fixes and other minor bug fixes
+Patching global operations
 Added progress bar support
 Added Dialog windows
 Added new menu bar feature
